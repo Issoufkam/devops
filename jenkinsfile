@@ -1,0 +1,42 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/h4ck33m/flaskcourses.git'
+            }
+        }
+        stage('Compile') {
+            steps {
+                sh 'mvn compile'
+            }
+        }
+        stage('Tests d\'interface utilisateur') {
+            steps {
+                sh 'mvn test -Dtest=MySeleniumTest'
+            }
+        }
+        stage('Tests de charge') {
+            steps {
+                sh 'jmeter -n -t MyJMeterTest.jmx -l results.jtl'
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                    archiveArtifacts artifacts: 'results.jtl', fingerprint: true
+                }
+            }
+        }
+        stage('Construction et déploiement du paquet') {
+            steps {
+                sh 'mvn package'
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                }
+            }
+        }
+    }
+}
